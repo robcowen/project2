@@ -11,13 +11,13 @@ else:
     db = redis.Redis('redis://h:pb3023e0d946b086371cdea7b53538ad69d0d83b3f9d4618df6ea83c2f60ab8bb@ec2-99-81-103-115.eu-west-1.compute.amazonaws.com:9589', decode_responses=True)
 
 app = Flask(__name__)
-app.config["SECRET_KEY"] = os.getenv("SECRET_KEY")
+app.config["SECRET_KEY"] = "secret"
 socketio = SocketIO(app)
 
 # Configure session to use filesystem
 app.config["SESSION_PERMANENT"] = True
 app.config["SESSION_TYPE"] = "filesystem"
-app.config["SECRET_KEY"] = "secret"
+
 Session(app)
 
 # Define message class
