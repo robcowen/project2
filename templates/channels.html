@@ -1,0 +1,235 @@
+{% extends "layout.html" %}
+
+
+
+{% block heading %}
+    Welcome, <span class="username"></span>. Please select or create a channel
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-2" id="channelList">
+      <h3>Channels</h3>
+      <ul>
+        {% for channel in channels %}
+          <li>
+            <span class="channelName" data-name="{{ channel }}">{{ channel }}</span> {% if channel != "General" %}<a class="deleteChannel small" data-name="{{ channel }}">(delete channel)</a>{% endif %}
+          </li>
+        {% endfor %}
+          <li id="createChannelWrapper">
+            <input type="text" id="createChannel" class=form-control placeholder="Add channel" />
+          </li>
+      </ul>
+    </div>
+    <div class="col" id="chatRoom">
+      <h3 id="channelHeading">Chat</h3>
+      <div id=messages>
+      </div>
+      <div class="form-group">
+        <textarea id=chatBox class="form-control" rows="2" placeholder="Type your message here"></textarea>
+
+      </div>
+      <div class="form-group">
+        <button class="btn btn-primary" id="sendMessage">Send message</button>
+      </div>
+      <div class="small" id="typing">
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+
+  if (window.localStorage){
+    var activeChannel = localStorage.getItem('activeChannel')
+    if (activeChannel == null) activeChannel = "General"
+
+  }
+  else var activeChannel = "General"
+
+  $('#channelHeading').html(activeChannel)
+
+  const username = "{{ username }}"
+
+
+
+  document.addEventListener('DOMContentLoaded', () => {
+
+    $("#chatRoom").animate({ scrollTop: $('#chatRoom').prop("scrollHeight")}, 1000);
+
+    // Save username to localstorage
+    localStorage.setItem('username', username);
+
+    $('.username').html(username)
+
+      // Connect to websocket
+      var socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port);
+
+      // When connected, configure interface
+      socket.on('connect', () => {
+
+        // Load default chat
+        socket.emit('open chat', activeChannel);
+
+        $('#createChannel').keypress(function (e) {
+          var key = e.which;
+          if(key == 13)  // the enter key code
+          {
+            const channel_name = $('#createChannel').val()
+            socket.emit('create channel', channel_name);
+
+            // Clear input
+            $('#createChannel').val('')
+          }
+        });
+
+        // Click delete channel
+        $('body').delegate( ".deleteChannel", "click", function() {
+          const channel_name = $(this).data('name')
+          socket.emit('delete channel', channel_name);
+        })
+
+        // Click on channel name
+        $('body').delegate( ".channelName", "click", function() {
+          const channel_name = $(this).data('name')
+
+          activeChannel = channel_name
+          $('#channelHeading').html(activeChannel)
+
+          // Save channel to localStorage
+          localStorage.setItem('activeChannel', activeChannel);
+
+          socket.emit('open chat', channel_name);
+        })
+
+        // Send messages
+        $('#sendMessage').click(function() {
+          socket.emit('typing', activeChannel, username, 0);
+          sendMessage()
+        })
+
+        $('#chatBox').keyup(function (e) {
+          var key = e.which;
+
+
+          var contents = $('#chatBox').val()
+
+          // Detect any typing (as long as box is not empty)
+          if (contents != "") socket.emit('typing', activeChannel, username, 1);
+          else socket.emit('typing', activeChannel, username, 0);
+
+
+          // Detect submit (enter button)
+          if(key == 13)  // the enter key code
+            {
+              socket.emit('typing', activeChannel, username, 0);
+              sendMessage()
+            }
+          });
+
+
+
+
+          function sendMessage() {
+            const message = $('#chatBox').val()
+
+            // Clear chatBox
+            $('#chatBox').val("")
+
+            // Send to websocket
+            socket.emit('send message', activeChannel, message, username);
+          }
+      });
+
+      // When a new channel is added, add to list
+      socket.on('channel added', channel_name => {
+          $('#channelList ul li:last').before('<li class="channelName" data-name="'+channel_name+'">'+channel_name+' <a class="deleteChannel small" data-name="'+channel_name+'">(delete channel)</a></li>')
+      });
+
+      // If a channel name already exists
+      socket.on('channel already exists', channel_name => {
+          alert("Error: Channel name already exists")
+      });
+
+      // When a new channel is deleted, remove from list
+      socket.on('channel deleted', channel_name => {
+        $('.deleteChannel[data-name="'+ channel_name +'"]').parent('li').remove()
+
+        // Return to General
+        activeChannel = "General"
+        socket.emit('open chat', activeChannel);
+      });
+
+      // When a chat is opened, display its contents
+      socket.on('chat opened', chats => {
+        $('#messages').empty()
+
+        $.each(chats, function(index, chat) {
+          const message = JSON.parse(chat)
+
+          var date = moment.unix(message.time).format("dddd Do MMMM YYYY, h:mma")
+
+          if (message.sender == username){
+            $('#messages').append("<div class='chat fromMe'>\
+              <div class='sender'>"+message.sender+" says:</div>\
+              <div class='text'>"+message.text+"</div>\
+              <div class='time'>"+date+"</div>\
+            </div>")
+          }
+          else {
+            $('#messages').append("<div class='chat'>\
+              <div class='sender'>"+message.sender+" says:</div>\
+              <div class='text'>"+message.text+"</div>\
+              <div class='time'>"+date+"</div>\
+            </div>")
+          }
+
+        })
+
+      });
+
+
+      // When a message is received, add to view
+      socket.on('message received', chat => {
+
+        const message = JSON.parse(chat)
+        var date = moment.unix(message.time).format("dddd Do MMMM YYYY, h:mma")
+
+
+        if (message.sender == username){
+          $('#messages').append("<div class='chat fromMe'>\
+            <div class='sender'>"+message.sender+" says:</div>\
+            <div class='text'>"+message.text+"</div>\
+            <div class='time'>"+date+"</div>\
+          </div>")
+        }
+        else {
+          $('#messages').append("<div class='chat'>\
+            <div class='sender'>"+message.sender+" says:</div>\
+            <div class='text'>"+message.text+"</div>\
+            <div class='time'>"+date+"</div>\
+          </div>")
+        }
+
+      });
+
+      socket.on('user is typing', data => {
+        data = JSON.parse(data)
+        console.log(data)
+
+        if ((data.channel_name == activeChannel) && (data.username != username) && data.contents == 1) {
+          $('#typing').html(data.username+" is typing...")
+        }
+        else {
+          $('#typing').html("")
+        }
+
+      })
+  });
+
+
+</script>
+
+{% endblock %}

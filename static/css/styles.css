@@ -1,0 +1,36 @@
+#channelList {
+  background-color: yellow ;
+}
+
+#chatRoom {
+  max-height: 75vh;
+  overflow-y: scroll;
+}
+
+.deleteChannel, .channelName {
+  cursor: pointer;
+}
+
+.chat {
+  background-color: #F0F8FF ;
+  margin: 5px ;
+  border-radius: 5px;
+  padding: 5px;
+}
+
+.time {
+  font-size: 10px ;
+}
+
+.sender {
+  font-weight: bold;
+  font-size: 12px;
+}
+
+.text {
+  font-size: 14px ;
+}
+
+.fromMe {
+  background-color: #ccffcc;
+}

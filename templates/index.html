@@ -1,0 +1,44 @@
+{% extends "layout.html" %}
+
+
+
+{% block heading %}
+    Welcome to Flack - please enter your username
+{% endblock %}
+
+{% block content %}
+<div>
+  <form id="usernameForm" action="{{ url_for('channels') }}" method="post">
+    <div class="form-group">
+      <input id="username" type=text name="username" class="form-control" placeholder="Enter your username" />
+    </div>
+    <div class="form-group">
+      <button class="btn btn-primary">Let's chat</button>
+    </div>
+  </form>
+</div>
+
+<script>
+
+
+// Check localstorage for username
+if (window.localStorage) {
+
+  const username = localStorage.getItem('username')
+
+  console.log(username)
+
+  if (username) {
+    // Set input value and POST form
+    $('#username').val(username)
+    $('#usernameForm').submit() ;
+
+  }
+}
+
+
+
+
+</script>
+
+{% endblock %}
