@@ -4,7 +4,11 @@ from flask import Flask, render_template, request, session, make_response, jsoni
 from flask_session import Session
 from flask_socketio import SocketIO, emit
 
-db = redis.Redis('localhost', decode_responses=True)
+if os.getenv("FLASK_ENV") == "development":
+    db = redis.Redis('localhost', decode_responses=True)
+else:
+    redis_url = os.getenv('REDIS_URL')
+    db = redis.Redis('redis://h:pb3023e0d946b086371cdea7b53538ad69d0d83b3f9d4618df6ea83c2f60ab8bb@ec2-99-81-103-115.eu-west-1.compute.amazonaws.com:9589', decode_responses=True)
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = os.getenv("SECRET_KEY")
